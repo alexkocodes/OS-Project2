@@ -3,11 +3,16 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <sys/stat.h>
+
 /*Create a function that creates n child processes */
 int *delegator(int n, int upper, int lower)
 {
+
     for (int i = 0; i < n; i++)
     {
+        /* Create a named pipe here*/
+
         int pid = fork();
         if (pid == 0)
         {
@@ -20,6 +25,11 @@ int *delegator(int n, int upper, int lower)
             /* Error */
             printf("Error");
             exit(1);
+        }
+        else
+        {
+            // parent process
+            wait(NULL);
         }
     }
     return 0;
@@ -61,6 +71,21 @@ int main(int argc, char *argv[])
             /*printf("n: %d\n", n);*/
         }
     }
+
+    /* Create n*n worker named pipes*/
+    char **fifo_names = malloc(sizeof(char *) * n * n);
+    for (int k = 0; k < n * n; k++)
+    {
+        char *fifo_name = malloc(sizeof(char) * 10);
+        sprintf(fifo_name, "fifo%d", k + 1);
+        fifo_names[k] = fifo_name;
+        printf("fifo_name: %s\n", fifo_name);
+        if (mkfifo(fifo_name, 0666) == -1)
+        {
+            printf("Error creating named pipe");
+            exit(1);
+        }
+    }
     /* Create n child processes */
     for (int j = 0; j < n; j++)
     {
@@ -83,6 +108,26 @@ int main(int argc, char *argv[])
             printf("Error");
             exit(1);
         }
+        else
+        {
+            // parent process
+            wait(NULL);
+        }
     }
+    /* Free all the named pipes */
+    for (int t = 0; t < n * n; t++)
+    {
+        if (unlink(fifo_names[t]) == -1)
+        {
+            perror("unlink");
+            return 1;
+        }
+        else
+        {
+            printf("Unlinked %s\n", fifo_names[t]);
+        }
+        free(fifo_names[t]);
+    }
+    free(fifo_names);
     return 0;
-};
+}
