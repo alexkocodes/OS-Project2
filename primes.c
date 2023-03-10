@@ -6,18 +6,17 @@
 #include <sys/stat.h>
 
 /*Create a function that creates n child processes */
-int *delegator(int n, int upper, int lower)
+int *delegator(int j, int n, int upper, int lower, char **fifonames)
 {
 
     for (int i = 0; i < n; i++)
     {
-        /* Create a named pipe here*/
-
         int pid = fork();
         if (pid == 0)
         {
             /* Child process */
             printf("Child process %d\n", i);
+            printf("Named pipe: %s\n", fifonames[i + j * n]);
             exit(0);
         }
         else if (pid < 0)
@@ -71,7 +70,7 @@ int main(int argc, char *argv[])
             /*printf("n: %d\n", n);*/
         }
     }
-
+    int counter = 0;
     /* Create n*n worker named pipes*/
     char **fifo_names = malloc(sizeof(char *) * n * n);
     for (int k = 0; k < n * n; k++)
@@ -99,7 +98,7 @@ int main(int argc, char *argv[])
             int lower_bound = upper - (upper - lower) / n * (j + 1);
             printf("upper_bound: %d\n", upper_bound);
             printf("lower_bound: %d\n", lower_bound);
-            delegator(n, upper_bound, lower_bound);
+            delegator(j, n, upper_bound, lower_bound, fifo_names);
             exit(0);
         }
         else if (pid < 0)
