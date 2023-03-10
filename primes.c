@@ -8,61 +8,70 @@
 
 // Create functions to find primes for a given subrange
 // --- Professor Provided functions to check if number is prime ---
-int prime1(int n) {
-  int i;
-  if (n == 1)
-    return 0;
-  for (i = 2; i < n; i++)
-    if (n % i == 0)
-      return 0;
-  return 1;
+int prime1(int n)
+{
+    int i;
+    if (n == 1)
+        return 0;
+    for (i = 2; i < n; i++)
+        if (n % i == 0)
+            return 0;
+    return 1;
 }
 
-int prime2(int n) {
-  int i = 0, limitup = 0;
-  limitup = (int)(sqrt((float)n));
-  if (n == 1)
-    return 0;
-  for (i = 2; i <= limitup; i++)
-    if (n % i == 0)
-      return 0;
-  return 1;
+int prime2(int n)
+{
+    int i = 0, limitup = 0;
+    limitup = (int)(sqrt((float)n));
+    if (n == 1)
+        return 0;
+    for (i = 2; i <= limitup; i++)
+        if (n % i == 0)
+            return 0;
+    return 1;
 }
 // --- Professor Provided functions to check if number is prime ---
 
 // --- Finding primes for a given subrange ---
 
 /* Create a struct to hold the primes and the size of the array */
-typedef struct {
-  int *primes; // array of primes in a given subrange
-  int size;    // size of the array
+typedef struct
+{
+    int *primes; // array of primes in a given subrange
+    int size;    // size of the array
 } primes_in_subrange;
 
 /* Create functions to find primes for a given subrange */
-primes_in_subrange find_primes1(int lower, int upper) {
-  int *primes = malloc(sizeof(int) * (upper - lower));
-  int size = 0;
-  for (int i = lower; i < upper; i++) {
-    if (prime1(i)) {
-      primes[size] = i;
-      size++;
+primes_in_subrange find_primes1(int lower, int upper)
+{
+    int *primes = malloc(sizeof(int) * (upper - lower));
+    int size = 0;
+    for (int i = lower; i < upper; i++)
+    {
+        if (prime1(i))
+        {
+            primes[size] = i;
+            size++;
+        }
     }
-  }
-  primes_in_subrange result = {primes, size};
-  return result;
+    primes_in_subrange result = {primes, size};
+    return result;
 }
 
-primes_in_subrange find_primes2(int lower, int upper) {
-  int *primes = malloc(sizeof(int) * (upper - lower));
-  int size = 0;
-  for (int i = lower; i < upper; i++) {
-    if (prime2(i)) {
-      primes[size] = i;
-      size++;
+primes_in_subrange find_primes2(int lower, int upper)
+{
+    int *primes = malloc(sizeof(int) * (upper - lower));
+    int size = 0;
+    for (int i = lower; i < upper; i++)
+    {
+        if (prime2(i))
+        {
+            primes[size] = i;
+            size++;
+        }
     }
-  }
-  primes_in_subrange result = {primes, size};
-  return result;
+    primes_in_subrange result = {primes, size};
+    return result;
 }
 // --- Finding primes for a given subrange ---
 
