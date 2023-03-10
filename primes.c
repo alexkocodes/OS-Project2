@@ -12,7 +12,7 @@ int *delegator(int n, int upper, int lower)
         if (pid == 0)
         {
             /* Child process */
-            printf("Child process %d", i);
+            printf("Child process %d\n", i);
             exit(0);
         }
         else if (pid < 0)
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
             int lower_bound = upper - (upper - lower) / n * (j + 1);
             printf("upper_bound: %d\n", upper_bound);
             printf("lower_bound: %d\n", lower_bound);
-            // delegator(n, upper_bound, lower_bound);
+            delegator(n, upper_bound, lower_bound);
             exit(0);
         }
         else if (pid < 0)
