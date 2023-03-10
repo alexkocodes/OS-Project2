@@ -38,27 +38,27 @@ int main(int argc, char *argv[])
         if (strcmp(argv[i], "-l") == 0)
         {
             lower = atoi(argv[i + 1]);
-            printf("lower: %d\n", lower);
+            /*printf("lower: %d\n", lower);*/
         }
         if (strcmp(argv[i], "-u") == 0)
         {
             upper = atoi(argv[i + 1]);
-            printf("upper: %d\n", upper);
+            /*printf("upper: %d\n", upper);*/
         }
         if (strcmp(argv[i], "-e") == 0)
         {
             equal = true;
-            printf("equal: %d\n", equal);
+            /*printf("equal: %d\n", equal);*/
         }
         if (strcmp(argv[i], "-r") == 0)
         {
             random = true;
-            printf("random: %d\n", random);
+            /*printf("random: %d\n", random);*/
         }
         if (strcmp(argv[i], "-n") == 0)
         {
             n = atoi(argv[i + 1]);
-            printf("n: %d\n", n);
+            /*printf("n: %d\n", n);*/
         }
     }
     /* Create n child processes */
