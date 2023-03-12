@@ -191,26 +191,26 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
     return 0;
 }
 
-void cleanup_handler(int sig, char **fifo_names, int num_pipes)
-{
-    // Close and remove all open named pipes
-    for (int i = 0; i < num_pipes; i++)
-    {
-        if (access(fifo_names[i], F_OK))
-        {
-            if (close(fifo_names[i]) == -1)
-            {
-                perror("Error closing pipe");
-            }
-            if (unlink(fifo_names[i]) == -1)
-            {
-                perror("Error removing pipe");
-            }
-        }
-    }
-    // Exit the program
-    exit(0);
-}
+// void cleanup_handler(int sig, char **fifo_names, int num_pipes)
+// {
+//     // Close and remove all open named pipes
+//     for (int i = 0; i < num_pipes; i++)
+//     {
+//         if (access(fifo_names[i], F_OK))
+//         {
+//             if (close(fifo_names[i]) == -1)
+//             {
+//                 perror("Error closing pipe");
+//             }
+//             if (unlink(fifo_names[i]) == -1)
+//             {
+//                 perror("Error removing pipe");
+//             }
+//         }
+//     }
+//     // Exit the program
+//     exit(0);
+// }
 int main(int argc, char *argv[])
 {
 
