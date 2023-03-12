@@ -13,7 +13,7 @@
 int prime1(int n)
 {
     int i;
-    if (n == 1)
+    if (n == 1 || n == 0)
         return 0;
     for (i = 2; i < n; i++)
         if (n % i == 0)
@@ -25,7 +25,7 @@ int prime2(int n)
 {
     int i = 0, limitup = 0;
     limitup = (int)(sqrt((float)n));
-    if (n == 1)
+    if (n == 1 || n == 0)
         return 0;
     for (i = 2; i <= limitup; i++)
         if (n % i == 0)
@@ -79,6 +79,7 @@ primes_in_subrange find_primes2(int lower, int upper)
 /*Create a function that creates n child processes */
 int *delegator(int j, int n, int upper, int lower, char **fifonames)
 {
+    int num_primes = 0;
     bool flag = true; // if flag is true, then we assign function 1 to the first child process and flip
     if (n % 2 != 0 && j % 2 == 0)
     {
@@ -92,7 +93,7 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
         {
             /* Child process */
             /*printf("Child process %d\n", i);*/
-            printf("Named pipe: %s\n", fifonames[i + j * n]);
+            /*printf("Named pipe: %s\n", fifonames[i + j * n]);*/
 
             /* Open named pipe */
             int fd = open(fifonames[i + j * n], O_WRONLY | O_NONBLOCK);
@@ -110,7 +111,7 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
             if (flag)
             {
                 // split the range into n subranges and find the primes in each subrange
-                printf("Finding primes in range %d to %d using function 1\n", sublower, subupper);
+                // printf("Finding primes in range %d to %d using function 1\n", sublower, subupper);
                 primes_in_subrange result = find_primes1(sublower, subupper);
                 for (int k = 0; k < result.size; k++)
                 {
@@ -130,7 +131,7 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
             else
             {
                 // split the range into n subranges and find the primes in each subrange
-                printf("Finding primes in range %d to %d using function 2\n", sublower, subupper);
+                // printf("Finding primes in range %d to %d using function 2\n", sublower, subupper);
                 primes_in_subrange result = find_primes2(sublower, subupper);
                 for (int k = 0; k < result.size; k++)
                 {
@@ -159,10 +160,10 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
         else
         {
             // parent process
-            int fd_r = open(fifonames[i + j * n], O_RDONLY | O_NONBLOCK);
+            int fd_r = open(fifonames[i + j * n], O_RDONLY);
             int prime;
             int bytes_read = read(fd_r, &prime, sizeof(int));
-            if (bytes_read <= 0)
+            if (bytes_read == -1)
             {
                 perror("read");
                 close(fd_r);
@@ -170,6 +171,7 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
             }
             while (bytes_read > 0)
             {
+                num_primes++;
                 printf("%d ", prime);
                 bytes_read = read(fd_r, &prime, sizeof(int));
                 if (bytes_read == -1)
@@ -178,14 +180,14 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                     close(fd_r);
                     return 1;
                 }
-                printf("Number of bytes read: %d", bytes_read);
             }
-            printf("\n");
+
             close(fd_r);
             wait(NULL);
         }
         flag = !flag;
     }
+    printf("Number of primes: %d\n", num_primes);
     return 0;
 }
 
@@ -218,6 +220,7 @@ int main(int argc, char *argv[])
     bool equal = false;
     bool random = false;
     int n = 0;
+    int num_primes = 0;
     for (int i = 0; i < argc; i++)
     {
         if (strcmp(argv[i], "-l") == 0)
@@ -261,6 +264,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
     }
+
     /* Create n child processes */
     for (int j = 0; j < n; j++)
     {
@@ -297,15 +301,6 @@ int main(int argc, char *argv[])
     /* Free all the named pipes */
     for (int t = 0; t < n * n; t++)
     {
-        if (close(fifo_names[t]) == -1)
-        {
-            perror("close");
-            return 1;
-        }
-        else
-        {
-            // printf("Closed %s\n", fifo_names[t]);
-        }
         if (unlink(fifo_names[t]) == -1)
         {
             perror("unlink");
