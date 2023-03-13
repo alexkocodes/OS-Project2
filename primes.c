@@ -7,7 +7,7 @@
 #include <math.h>
 #include <fcntl.h>
 #include <sys/wait.h>
-
+#include <time.h>
 // Create functions to find primes for a given subrange
 // --- Professor Provided functions to check if number is prime ---
 int prime1(int n)
@@ -74,6 +74,38 @@ primes_in_subrange find_primes2(int lower, int upper)
     }
     primes_in_subrange result = {primes, size};
     return result;
+}
+
+// Function to generate n random intervals in the range [lower, upper]
+// The intervals will look something like this for n = 4:
+// [lower, x1], [x1 + 1, x2], [x2 + 1, x3], [x3 + 1, upper]
+// Where x1, x2, x3 are random numbers in the range [lower, upper]
+// that divide the range [lower, upper] into n equal subranges
+int *generate_random_intervals(int lower, int upper, int n) {
+    srand(time(0));
+
+    // Create 2 * n "points" randomly in the range [lower, upper]
+    // Ensuring that the first point == lower and the (n + 1)th point == upper
+    int* points = malloc(sizeof(int) * 2 * n);
+
+    points[0] = lower;
+    points[(2 * n) - 1] = upper;
+
+    for (int i = 1; i < (2 * n) - 1; i += 2) {
+        // Create a random point such that:
+        // 1. The point is greater than the previous point
+        // 2. The point is less than the upper bound
+
+        int lower_bound = points[i - 1] + 1;
+        int upper_bound = upper - (2 * n - i - 1);
+
+        points[i] = lower_bound + rand() % (upper_bound - lower_bound + 1);
+        // Now, create a point that is this point + 1
+        // This ensures that the points are not equal
+        points[i + 1] = points[i] + 1;
+    }
+
+    return points;
 }
 
 /*Create a function that creates n child processes */
@@ -221,6 +253,16 @@ int main(int argc, char *argv[])
     bool random = false;
     int n = 0;
     int num_primes = 0;
+
+    // --- Testing generate_random_intervals
+    // n = 5;
+    // int* random_intervals = generate_random_intervals(1, 25, n);
+    // for (int i = 0; i < 2 * n; i+= 2)
+    // {
+    //     printf("%d %d\n", random_intervals[i], random_intervals[i+1]);
+    // }
+    // ---
+
     for (int i = 0; i < argc; i++)
     {
         if (strcmp(argv[i], "-l") == 0)
@@ -272,18 +314,26 @@ int main(int argc, char *argv[])
         if (pid == 0)
         {
             /* Child process */
+            int upper_bound = 0;
+            int lower_bound = 0;
             printf("Delegator process %d\n", j);
-            /* Each delegator takes 1/n range from upper and lower bounds */
-            int upper_bound = upper - (upper - lower) / n * j;
-            int lower_bound = upper - (upper - lower) / n * (j + 1) + 1;
-            if (j == n - 1)
-            {
-                lower_bound = lower;
+            if (random) {
+                int *random_intervals = generate_random_intervals(lower, upper, n);
+                upper_bound = random_intervals[2 * j + 1];
+                lower_bound = random_intervals[2 * j];
+            } else {
+                /* Each delegator takes 1/n range from upper and lower bounds */
+                upper_bound = upper - (upper - lower) / n * j;
+                lower_bound = upper - (upper - lower) / n * (j + 1) + 1;
+                if (j == n - 1)
+                {
+                    lower_bound = lower;
+                }
             }
-            // printf("upper_bound: %d\n", upper_bound);
-            // printf("lower_bound: %d\n", lower_bound);
-            delegator(j, n, upper_bound, lower_bound, fifo_names);
-            exit(0);
+                printf("upper_bound: %d\n", upper_bound);
+                printf("lower_bound: %d\n", lower_bound);
+                delegator(j, n, upper_bound, lower_bound, fifo_names);
+                exit(0);
         }
         else if (pid < 0)
         {
