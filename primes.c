@@ -91,6 +91,21 @@ int *generate_random_intervals(int lower, int upper, int n) {
     points[0] = lower;
     points[(2 * n) - 1] = upper;
 
+    // If upper - lower + 1 < 2 * n, then we can't create n intervals
+    // In that case, create as many intervals as possible and fill the rest with -1
+    if (upper - lower + 1 < 2 * n) {
+        for (int i = 1; i < (2 * n) - 1; i += 2) {
+            points[i] = lower + i / 2;
+            points[i + 1] = lower + i / 2 + 1;
+        }
+        return points;
+    }
+
+    // If lower == upper, then we can just return the points
+    if (lower == upper) {
+        return points;
+    }
+
     for (int i = 1; i < (2 * n) - 1; i += 2) {
         // Create a random point such that:
         // 1. The point is greater than the previous point
@@ -112,6 +127,7 @@ int *generate_random_intervals(int lower, int upper, int n) {
 int *delegator(int j, int n, int upper, int lower, char **fifonames)
 {
     int num_primes = 0;
+    bool random = true;
     bool flag = true; // if flag is true, then we assign function 1 to the first child process and flip
     if (n % 2 != 0 && j % 2 == 0)
     {
@@ -134,11 +150,20 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                 perror("Error opening named pipe\n");
                 exit(1);
             }
-            int sublower = lower + (upper - lower) / n * i;
-            int subupper = lower + (upper - lower) / n * (i + 1) - 1;
+            int sublower = 0;
+            int subupper = 0;
+            if (!random) {
+            sublower = lower + (upper - lower) / n * i;
+            subupper = lower + (upper - lower) / n * (i + 1) - 1;
             if (i == n - 1)
             {
                 subupper = upper;
+            }
+            }
+            else {
+                int *points = generate_random_intervals(lower, upper, n);
+                sublower = points[2 * i];
+                subupper = points[2 * i + 1];
             }
             if (flag)
             {
