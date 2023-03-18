@@ -169,6 +169,8 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
             {
                 // split the range into n subranges and find the primes in each subrange
                 // printf("Finding primes in range %d to %d using function 1\n", sublower, subupper);
+                time_t start, end;
+                start = clock();
                 primes_in_subrange result = find_primes1(sublower, subupper);
                 for (int k = 0; k < result.size; k++)
                 {
@@ -181,7 +183,9 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                         return 1;
                     }
                 }
+                end = clock();
                 printf("\n");
+                printf("Time taken: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
                 // Close the named pipe
                 close(fd);
             }
@@ -189,6 +193,8 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
             {
                 // split the range into n subranges and find the primes in each subrange
                 // printf("Finding primes in range %d to %d using function 2\n", sublower, subupper);
+                time_t start, end;
+                start = clock();
                 primes_in_subrange result = find_primes2(sublower, subupper);
                 for (int k = 0; k < result.size; k++)
                 {
@@ -202,7 +208,9 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                     }
                     // printf("Number of bytes written: %d", bytes_written);
                 }
+                end = clock();
                 printf("\n");
+                printf("Time taken: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
                 // Close the named pipe
                 close(fd);
             }
