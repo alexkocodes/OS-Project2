@@ -8,6 +8,18 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <time.h>
+
+// comparison function for qsort method
+int compare(const void *a, const void *b)
+{
+    return (*(int *)a - *(int *)b);
+}
+// q sort function
+void qsort_primes(int *primes, int size)
+{
+    qsort(primes, size, sizeof(int), compare);
+}
+
 // Create functions to find primes for a given subrange
 // --- Professor Provided functions to check if number is prime ---
 int prime1(int n)
@@ -129,10 +141,11 @@ int *generate_random_intervals(int lower, int upper, int n)
 }
 
 /*Create a function that creates n child processes */
-int *delegator(int j, int n, int upper, int lower, char **fifonames)
+int *delegator(int j, int n, int upper, int lower, char **fifonames, char **delegator_pipes)
 {
     int num_primes = 0;
     bool random = true;
+    char *delegator_pipe = delegator_pipes[j];
     bool flag = true; // if flag is true, then we assign function 1 to the first child process and flip
     if (n % 2 != 0 && j % 2 == 0)
     {
@@ -190,7 +203,6 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                         return 1;
                     }
                 }
-                printf("\n");
             }
             else
             {
@@ -209,7 +221,6 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                     }
                     // printf("Number of bytes written: %d", bytes_written);
                 }
-                printf("\n");
             }
             exit(0);
         }
@@ -223,6 +234,7 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
         {
             // parent process
             int fd_r = open(fifonames[i + j * n], O_RDONLY | O_NONBLOCK);
+            int fd_w = open(delegator_pipe, O_WRONLY | O_NONBLOCK);
             int prime;
             fd_set fds;
             FD_ZERO(&fds);
@@ -245,7 +257,19 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                 while (bytes_read > 0)
                 {
                     num_primes++;
-                    printf("%d ", prime);
+                    // printf("%d ", prime);
+                    /* write to the delegator pipe*/
+                    int bytes_written = write(fd_w, &prime, sizeof(int));
+                    if (bytes_written == -1)
+                    {
+                        perror("write");
+                        close(fd_w);
+                        return 1;
+                    }
+                    else
+                    {
+                        // printf("Written back to the delegator pipe with %d", prime);
+                    }
                     num_ready = select(fd_r + 1, &fds, NULL, NULL, NULL);
                     if (num_ready > 0)
                     {
@@ -258,7 +282,6 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                         }
                     }
                 }
-                printf("\n");
             }
             close(fd_r);
             wait(NULL);
@@ -308,8 +331,8 @@ int main(int argc, char *argv[])
     //     printf("%d %d\n", random_intervals[i], random_intervals[i+1]);
     // }
     // ---
-
-    for (int i = 0; i < argc; i++)
+    int i = 0;
+    for (i = 0; i < argc; i++)
     {
         if (strcmp(argv[i], "-l") == 0)
         {
@@ -338,24 +361,40 @@ int main(int argc, char *argv[])
         }
     }
     int counter = 0;
+    int *result = malloc(sizeof(int) * upper);
     /* Create n*n worker named pipes*/
     char **fifo_names = malloc(sizeof(char *) * n * n);
-    for (int k = 0; k < n * n; k++)
+    int k;
+    for (k = 0; k < n * n; k++)
     {
         char *fifo_name = malloc(sizeof(char) * 10);
         sprintf(fifo_name, "fifo%d", k + 1);
         fifo_names[k] = fifo_name;
-        printf("fifo_name: %s\n", fifo_name);
+        /*printf("fifo_name: %s\n", fifo_name);*/
         if (mkfifo(fifo_name, 0666) == -1)
         {
             printf("Error creating named pipe");
             exit(1);
         }
     }
-
+    /* Create n named pipes for communications between root and delegators */
+    char **delegator_pipes = malloc(sizeof(char *) * n);
+    for (k = 0; k < n; k++)
+    {
+        char *delegator_pipe = malloc(sizeof(char) * 10);
+        sprintf(delegator_pipe, "delegator_pipe%d", k + 1);
+        delegator_pipes[k] = delegator_pipe;
+        /*printf("delegator_pipe: %s\n", delegator_pipe);*/
+        if (mkfifo(delegator_pipe, 0666) == -1)
+        {
+            printf("Error creating named pipe");
+            exit(1);
+        }
+    }
     /* Create n child processes */
     for (int j = 0; j < n; j++)
     {
+        int fd_r = open(delegator_pipes[j], O_RDONLY | O_NONBLOCK);
         int pid = fork();
         if (pid == 0)
         {
@@ -379,9 +418,11 @@ int main(int argc, char *argv[])
                     lower_bound = lower;
                 }
             }
+            /*
             printf("upper_bound: %d\n", upper_bound);
             printf("lower_bound: %d\n", lower_bound);
-            delegator(j, n, upper_bound, lower_bound, fifo_names);
+            */
+            delegator(j, n, upper_bound, lower_bound, fifo_names, delegator_pipes);
             exit(0);
         }
         else if (pid < 0)
@@ -393,12 +434,74 @@ int main(int argc, char *argv[])
         else
         {
             // parent process
+            int fd_r = open(delegator_pipes[j], O_RDONLY | O_NONBLOCK);
+            int prime;
+            fd_set fds;
+            FD_ZERO(&fds);
+            FD_SET(fd_r, &fds);
+            int num_ready = select(fd_r + 1, &fds, NULL, NULL, NULL);
+            if (num_ready == -1)
+            {
+                perror("select");
+                return 1;
+            }
+            if (num_ready > 0)
+            {
+                int bytes_read = read(fd_r, &prime, sizeof(int));
+                if (bytes_read == -1)
+                {
+                    perror("read");
+                    close(fd_r);
+                    return 1;
+                }
+                while (bytes_read > 0)
+                {
+                    num_primes++;
+                    /* Add prime to the result array */
+                    result[counter] = prime;
+                    counter++;
+                    num_ready = select(fd_r + 1, &fds, NULL, NULL, NULL);
+                    if (num_ready > 0)
+                    {
+                        bytes_read = read(fd_r, &prime, sizeof(int));
+                        if (bytes_read == -1)
+                        {
+                            perror("read");
+                            close(fd_r);
+                            return 1;
+                        }
+                    }
+                }
+            }
             wait(NULL);
         }
     }
 
+    /* q sort the result array*/
+    qsort(result, num_primes, sizeof(int), compare);
+    /* Print the result */
+    printf("Number of primes in total: %d\n", num_primes);
+    printf("Primes: ");
+    for (i = 0; i < num_primes; i++)
+    {
+        printf("%d ", result[i]);
+    }
+    printf("\n");
+    free(result);
+
+    int t, d;
+    /* Close all the delegator pipes*/
+    for (d = 0; d < n; d++)
+    {
+        close(delegator_pipes[d]);
+    }
+    /* Close all the worker pipes*/
+    for (t = 0; t < n * n; t++)
+    {
+        close(fifo_names[t]);
+    }
     /* Free all the named pipes */
-    for (int t = 0; t < n * n; t++)
+    for (t = 0; t < n * n; t++)
     {
         if (unlink(fifo_names[t]) == -1)
         {
@@ -412,5 +515,21 @@ int main(int argc, char *argv[])
         free(fifo_names[t]);
     }
     free(fifo_names);
+
+    /* Free all the delegator pipes*/
+    for (d = 0; d < n; d++)
+    {
+        if (unlink(delegator_pipes[d]) == -1)
+        {
+            perror("unlink");
+            return 1;
+        }
+        else
+        {
+            // printf("Unlinked %s\n", fifo_names[t]);
+        }
+        free(delegator_pipes[d]);
+    }
+    free(delegator_pipes);
     return 0;
 }
