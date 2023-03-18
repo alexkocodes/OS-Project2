@@ -141,7 +141,7 @@ int *generate_random_intervals(int lower, int upper, int n)
 }
 
 /*Create a function that creates n child processes */
-int *delegator(int j, int n, int upper, int lower, char **fifonames, char **delegator_pipes)
+int delegator(int j, int n, int upper, int lower, char **fifonames, char **delegator_pipes)
 {
     int num_primes = 0;
     bool random = true;
@@ -456,19 +456,22 @@ int main(int argc, char *argv[])
                 }
                 while (bytes_read > 0)
                 {
-                    num_primes++;
-                    /* Add prime to the result array */
-                    result[counter] = prime;
-                    counter++;
-                    num_ready = select(fd_r + 1, &fds, NULL, NULL, NULL);
-                    if (num_ready > 0)
+                    if (prime <= upper)
                     {
-                        bytes_read = read(fd_r, &prime, sizeof(int));
-                        if (bytes_read == -1)
+                        num_primes++;
+                        /* Add prime to the result array */
+                        result[counter] = prime;
+                        counter++;
+                        num_ready = select(fd_r + 1, &fds, NULL, NULL, NULL);
+                        if (num_ready > 0)
                         {
-                            perror("read");
-                            close(fd_r);
-                            return 1;
+                            bytes_read = read(fd_r, &prime, sizeof(int));
+                            if (bytes_read == -1)
+                            {
+                                perror("read");
+                                close(fd_r);
+                                return 1;
+                            }
                         }
                     }
                 }
