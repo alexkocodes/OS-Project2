@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <signal.h>
 
 // comparison function for qsort method
 int compare(const void *a, const void *b)
@@ -161,6 +162,14 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
             /*printf("Child process %d\n", i);*/
             /*printf("Named pipe: %s\n", fifonames[i + j * n]);*/
 
+            // Open signal pipe for write
+            int fd_s = open("signal_pipe", O_WRONLY | O_NONBLOCK);
+            if (fd_s == -1)
+            {
+                perror("Error opening signal pipe\n");
+                exit(1);
+            }
+
             /* Open time pipe for write */
             int fd_t = open("time_pipe", O_WRONLY | O_NONBLOCK);
             if (fd_t == -1)
@@ -223,6 +232,15 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                     close(fd_t);
                     return 1;
                 }
+                // Write to signal pipe
+                int signal = SIGUSR1;
+                bytes_written = write(fd_s, &signal, sizeof(int));
+                if (bytes_written == -1)
+                {
+                    perror("write");
+                    close(fd_s);
+                    return 1;
+                }
                 // Close the named pipe
                 close(fd);
             }
@@ -254,6 +272,15 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                 {
                     perror("write");
                     close(fd_t);
+                    return 1;
+                }
+                // Write to signal pipe
+                int signal = SIGUSR2;
+                bytes_written = write(fd_s, &signal, sizeof(int));
+                if (bytes_written == -1)
+                {
+                    perror("write");
+                    close(fd_s);
                     return 1;
                 }
                 // Close the named pipe
@@ -435,6 +462,19 @@ int main(int argc, char *argv[])
         exit(1);
     }
     int time_pipe_fd = open("time_pipe", O_RDONLY | O_NONBLOCK);
+
+    int sigusr1_count = 0;
+    int sigusr2_count = 0;
+
+    // Create a neamed pipe for passing SIGUSR1 or SIGUSR2 from worker to root
+    if (mkfifo("signal_pipe", 0666) == -1)
+    {
+        printf("Error creating named pipe");
+        exit(1);
+    }
+    int signal_pipe_fd = open("signal_pipe", O_RDONLY | O_NONBLOCK);
+
+
     /* Create n child processes */
     for (int j = 0; j < n; j++)
     {
@@ -599,6 +639,59 @@ int main(int argc, char *argv[])
     printf("Min time: %f\n", min);
     printf("Average time: %f\n", sum / time_counter);
 
+    // Open the read for signal_pipe
+    if (signal_pipe_fd == -1)
+    {
+        perror("open");
+        return 1;
+    }
+    fd_set fds2;
+    FD_ZERO(&fds2);
+    FD_SET(signal_pipe_fd, &fds2);
+    num_ready = select(signal_pipe_fd + 1, &fds2, NULL, NULL, NULL);
+    if (num_ready == -1)
+    {
+        perror("select");
+        return 1;
+    }
+    if (num_ready > 0) {
+        // printf("Signal pipe is ready\n");
+        int signal;
+        int bytes_read = read(signal_pipe_fd, &signal, sizeof(int));
+        if (bytes_read == -1)
+        {
+            perror("read");
+            close(signal_pipe_fd);
+            return 1;
+        }
+
+        while (bytes_read > 0)
+        {
+            if (signal == SIGUSR1)
+            {
+                sigusr1_count++;   
+            } else if (signal == SIGUSR2)
+            {
+                sigusr2_count++;
+            }
+            
+            num_ready = select(signal_pipe_fd + 1, &fds2, NULL, NULL, NULL);
+            if (num_ready > 0)
+            {
+                bytes_read = read(signal_pipe_fd, &signal, sizeof(int));
+                if (bytes_read == -1)
+                {
+                    perror("read");
+                    close(signal_pipe_fd);
+                    return 1;
+                }
+            }
+        }
+    }
+
+    printf("SIGUSR1: %d\n", sigusr1_count);
+    printf("SIGUSR2: %d\n", sigusr2_count);
+
     int t, d;
     /* Close all the delegator pipes*/
     for (d = 0; d < n; d++)
@@ -644,6 +737,17 @@ int main(int argc, char *argv[])
 
     /* Free the time pipe */
     if (unlink("time_pipe") == -1)
+    {
+        perror("unlink");
+        return 1;
+    }
+    else
+    {
+        // printf("Unlinked %s\n", fifo_names[t]);
+    }
+
+    /* Free the signal pipe */
+    if (unlink("signal_pipe") == -1)
     {
         perror("unlink");
         return 1;
