@@ -140,7 +140,7 @@ int *generate_random_intervals(int lower, int upper, int n)
     return points;
 }
 
-/*Create a function that creates n child processes */
+/*function that creates n child processes */
 int delegator(int j, int n, int upper, int lower, char **fifonames, char **delegator_pipes)
 {
     int num_primes = 0;
@@ -161,6 +161,13 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
             /*printf("Child process %d\n", i);*/
             /*printf("Named pipe: %s\n", fifonames[i + j * n]);*/
 
+            /* Open time pipe for write */
+            int fd_t = open("time_pipe", O_WRONLY | O_NONBLOCK);
+            if (fd_t == -1)
+            {
+                perror("Error opening time pipe\n");
+                exit(1);
+            }
             /* Open named pipe */
             int fd = open(fifonames[i + j * n], O_WRONLY | O_NONBLOCK);
             if (fd == -1)
@@ -207,7 +214,18 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                 }
                 end = clock();
                 printf("\n");
-                printf("Time taken: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+                double time_taken = (double)(end - start) / CLOCKS_PER_SEC;
+                printf("Time taken: %f\n", time_taken);
+                /* Write to time pipe */
+                int bytes_written = write(fd_t, &time_taken, sizeof(double));
+                if (bytes_written == -1)
+                {
+                    perror("write");
+                    close(fd_t);
+                    return 1;
+                }
+                printf(
+                    "Number of bytes written: %d", bytes_written);
                 // Close the named pipe
                 close(fd);
             }
@@ -232,7 +250,19 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                 }
                 end = clock();
                 printf("\n");
-                printf("Time taken: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+                double time_taken = (double)(end - start) / CLOCKS_PER_SEC;
+                printf("Time taken: %f\n", time_taken);
+                /* Write to time pipe */
+                int bytes_written = write(fd_t, &time_taken, sizeof(double));
+                if (bytes_written == -1)
+                {
+                    perror("write");
+                    close(fd_t);
+                    return 1;
+                }
+                printf(
+                    "Number of bytes written: %d", bytes_written);
+
                 // Close the named pipe
                 close(fd);
             }
@@ -405,6 +435,13 @@ int main(int argc, char *argv[])
             exit(1);
         }
     }
+    /* Create a named pipe for passing time taken by each worker node*/
+    if (mkfifo("time_pipe", 0666) == -1)
+    {
+        printf("Error creating named pipe");
+        exit(1);
+    }
+    int time_pipe_fd = open("time_pipe", O_RDONLY | O_NONBLOCK);
     /* Create n child processes */
     for (int j = 0; j < n; j++)
     {
@@ -506,6 +543,69 @@ int main(int argc, char *argv[])
     printf("\n");
     free(result);
 
+    /* Store the max, min, and average of time*/
+    double max = 0;
+    double min = 100000000;
+    double sum = 0;
+
+    int time_counter = 0;
+    /* Open the read for time_pipe */
+    if (time_pipe_fd == -1)
+    {
+        perror("open");
+        return 1;
+    }
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(time_pipe_fd, &fds);
+    int num_ready = select(time_pipe_fd + 1, &fds, NULL, NULL, NULL);
+    if (num_ready == -1)
+    {
+        perror("select");
+        return 1;
+    }
+    if (num_ready > 0)
+    {
+        double time;
+        int bytes_read = read(time_pipe_fd, &time, sizeof(double));
+
+        if (bytes_read == -1)
+        {
+            perror("read");
+            close(time_pipe_fd);
+            return 1;
+        }
+        while (bytes_read > 0)
+        {
+            if (time > max)
+            {
+                max = time;
+            }
+            if (time < min)
+            {
+                min = time;
+            }
+            sum += time;
+            time_counter++;
+            num_ready = select(time_pipe_fd + 1, &fds, NULL, NULL, NULL);
+            if (num_ready > 0)
+            {
+                bytes_read = read(time_pipe_fd, &time, sizeof(double));
+                if (bytes_read == -1)
+                {
+                    perror("read");
+                    close(time_pipe_fd);
+                    return 1;
+                }
+            }
+            // printf("Counter: %d, Time: %f\n", time_counter, time);
+        }
+    }
+
+    printf("Max time: %f\n", max);
+    printf("Min time: %f\n", min);
+    printf("Average time: %f\n", sum / time_counter);
+
     int t, d;
     /* Close all the delegator pipes*/
     for (d = 0; d < n; d++)
@@ -548,5 +648,17 @@ int main(int argc, char *argv[])
         free(delegator_pipes[d]);
     }
     free(delegator_pipes);
+
+    /* Free the time pipe */
+    if (unlink("time_pipe") == -1)
+    {
+        perror("unlink");
+        return 1;
+    }
+    else
+    {
+        // printf("Unlinked %s\n", fifo_names[t]);
+    }
+
     return 0;
 }
