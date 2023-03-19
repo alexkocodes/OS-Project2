@@ -213,9 +213,8 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                     }
                 }
                 end = clock();
-                printf("\n");
                 double time_taken = (double)(end - start) / CLOCKS_PER_SEC;
-                printf("Time taken: %f\n", time_taken);
+                /*printf("Time taken: %f\n", time_taken);*/
                 /* Write to time pipe */
                 int bytes_written = write(fd_t, &time_taken, sizeof(double));
                 if (bytes_written == -1)
@@ -224,8 +223,6 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                     close(fd_t);
                     return 1;
                 }
-                printf(
-                    "Number of bytes written: %d", bytes_written);
                 // Close the named pipe
                 close(fd);
             }
@@ -249,9 +246,8 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                     // printf("Number of bytes written: %d", bytes_written);
                 }
                 end = clock();
-                printf("\n");
                 double time_taken = (double)(end - start) / CLOCKS_PER_SEC;
-                printf("Time taken: %f\n", time_taken);
+                /*printf("Time taken: %f\n", time_taken);*/
                 /* Write to time pipe */
                 int bytes_written = write(fd_t, &time_taken, sizeof(double));
                 if (bytes_written == -1)
@@ -260,9 +256,6 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                     close(fd_t);
                     return 1;
                 }
-                printf(
-                    "Number of bytes written: %d", bytes_written);
-
                 // Close the named pipe
                 close(fd);
             }
