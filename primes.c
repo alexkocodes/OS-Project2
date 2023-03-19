@@ -8,6 +8,31 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <signal.h>
+
+// --- Global variables ---
+int sigusr1_count = 0;
+int sigusr2_count = 0;
+int root_pid = 0;
+
+// --- Signal handlers ---
+void sigusr1_handler(int signum)
+{
+    if (signum == SIGUSR1)
+    {
+        printf("Received SIGUSR1 from worker node\n");
+        sigusr1_count++;
+    }
+}
+
+void sigusr2_handler(int signum)
+{
+    if (signum == SIGUSR2)
+    {
+        printf("Received SIGUSR2 from worker node\n");
+        sigusr2_count++;
+    }
+}
 // Create functions to find primes for a given subrange
 // --- Professor Provided functions to check if number is prime ---
 int prime1(int n)
@@ -185,7 +210,9 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                 }
                 end = clock();
                 printf("\n");
-                printf("Time taken: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+                // printf("Time taken: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+                // Send a signal to the parent process to indicate that the child process is done
+                kill(root_pid, SIGUSR1);
                 // Close the named pipe
                 close(fd);
             }
@@ -210,7 +237,9 @@ int *delegator(int j, int n, int upper, int lower, char **fifonames)
                 }
                 end = clock();
                 printf("\n");
-                printf("Time taken: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+                // printf("Time taken: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+                // Send a signal to the parent process to indicate that the child process is done
+                kill(root_pid, SIGUSR2);
                 // Close the named pipe
                 close(fd);
             }
@@ -340,6 +369,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    root_pid = getpid();
+    signal(SIGUSR1, sigusr1_handler);
+    signal(SIGUSR2, sigusr2_handler);
+
     /* Create n child processes */
     for (int j = 0; j < n; j++)
     {
@@ -396,5 +429,9 @@ int main(int argc, char *argv[])
         free(fifo_names[t]);
     }
     free(fifo_names);
+
+    // Print signal statistics
+    printf("SIGUSR1 count: %d\n", sigusr1_count);
+    printf("SIGUSR2 count: %d\n", sigusr2_count);
     return 0;
 }
