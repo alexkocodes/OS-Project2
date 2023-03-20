@@ -142,10 +142,9 @@ int *generate_random_intervals(int lower, int upper, int n)
 }
 
 /*function that creates n child processes */
-int delegator(int j, int n, int upper, int lower, char **fifonames, char **delegator_pipes)
+int delegator(int j, int n, int upper, int lower, char **fifonames, char **delegator_pipes, bool random)
 {
     int num_primes = 0;
-    bool random = true;
     char *delegator_pipe = delegator_pipes[j];
     bool flag = true; // if flag is true, then we assign function 1 to the first child process and flip
     if (n % 2 != 0 && j % 2 == 0)
@@ -506,7 +505,7 @@ int main(int argc, char *argv[])
             printf("upper_bound: %d\n", upper_bound);
             printf("lower_bound: %d\n", lower_bound);
             */
-            delegator(j, n, upper_bound, lower_bound, fifo_names, delegator_pipes);
+            delegator(j, n, upper_bound, lower_bound, fifo_names, delegator_pipes, random);
             exit(0);
         }
         else if (pid < 0)
