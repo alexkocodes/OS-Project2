@@ -232,15 +232,6 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                     close(fd_t);
                     return 1;
                 }
-                // Write to signal pipe
-                int signal = SIGUSR1;
-                bytes_written = write(fd_s, &signal, sizeof(int));
-                if (bytes_written == -1)
-                {
-                    perror("write");
-                    close(fd_s);
-                    return 1;
-                }
                 // Close the named pipe
                 close(fd);
             }
@@ -274,17 +265,26 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                     close(fd_t);
                     return 1;
                 }
-                // Write to signal pipe
-                int signal = SIGUSR2;
-                bytes_written = write(fd_s, &signal, sizeof(int));
-                if (bytes_written == -1)
-                {
-                    perror("write");
-                    close(fd_s);
-                    return 1;
-                }
                 // Close the named pipe
                 close(fd);
+            }
+            // Write signal to signal pipe
+            // First, we need to determine the signal to send
+            int signal;
+            if (j % 2 == 0) // "even delegator" -> send SIGUSR1
+            {
+                signal = SIGUSR1;
+            }
+            else // "odd delegator" -> send SIGUSR2
+            {
+                signal = SIGUSR2;
+            }
+            // Secondly, write the signal to the signal pipe
+            int bytes_written = write(fd_s, &signal, sizeof(int));
+            if (bytes_written == -1) {
+                perror("write");
+                close(fd_s);
+                return 1;
             }
             exit(0);
         }
