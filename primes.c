@@ -1,3 +1,5 @@
+/* Group Parners: Alex Ko (fyk211) and Ritin Malhotra (rm5486)*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -145,15 +147,15 @@ int *generate_random_intervals(int lower, int upper, int n)
 int delegator(int j, int n, int upper, int lower, char **fifonames, char **delegator_pipes, bool random)
 {
     int num_primes = 0;
-    char *delegator_pipe = delegator_pipes[j];
-    bool flag = true; // if flag is true, then we assign function 1 to the first child process and flip
+    char *delegator_pipe = delegator_pipes[j]; // get the pipe name for the current delegator, used for passing the primes to the parent process
+    bool flag = true;                          // if flag is true, then we assign function 1 to the first child process and flip
     if (n % 2 != 0 && j % 2 == 0)
     {
         flag = false; // if n is odd and j is even, then we assign function 2 to the first child process and flip
     }
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) // create n child worker processes here
     {
-        int fd_r = open(fifonames[i + j * n], O_RDONLY | O_NONBLOCK);
+        int fd_r = open(fifonames[i + j * n], O_RDONLY | O_NONBLOCK); // open the named pipe for read for each worker
         int pid = fork();
         if (pid == 0)
         {
@@ -161,7 +163,7 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
             /*printf("Child process %d\n", i);*/
             /*printf("Named pipe: %s\n", fifonames[i + j * n]);*/
 
-            // Open signal pipe for write
+            // Open signal pipe for write for passing the signals
             int fd_s = open("signal_pipe", O_WRONLY | O_NONBLOCK);
             if (fd_s == -1)
             {
@@ -207,12 +209,12 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                 // split the range into n subranges and find the primes in each subrange
                 // printf("Finding primes in range %d to %d using function 1\n", sublower, subupper);
                 time_t start, end;
-                start = clock();
+                start = clock(); // start the timer
                 primes_in_subrange result = find_primes1(sublower, subupper);
                 for (int k = 0; k < result.size; k++)
                 {
                     // printf("%d ", result.primes[k]);
-                    int bytes_written = write(fd, &result.primes[k], sizeof(int));
+                    int bytes_written = write(fd, &result.primes[k], sizeof(int)); // write the primes to the named pipe
                     if (bytes_written == -1)
                     {
                         perror("write");
@@ -220,11 +222,11 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                         return 1;
                     }
                 }
-                end = clock();
+                end = clock(); // end the timer
                 double time_taken = (double)(end - start) / CLOCKS_PER_SEC;
                 /*printf("Time taken: %f\n", time_taken);*/
                 /* Write to time pipe */
-                int bytes_written = write(fd_t, &time_taken, sizeof(double));
+                int bytes_written = write(fd_t, &time_taken, sizeof(double)); // write the time taken to the time pipe
                 if (bytes_written == -1)
                 {
                     perror("write");
@@ -239,12 +241,12 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                 // split the range into n subranges and find the primes in each subrange
                 // printf("Finding primes in range %d to %d using function 2\n", sublower, subupper);
                 time_t start, end;
-                start = clock();
+                start = clock(); // start the timer
                 primes_in_subrange result = find_primes2(sublower, subupper);
                 for (int k = 0; k < result.size; k++)
                 {
                     // printf("%d ", result.primes[k]);
-                    int bytes_written = write(fd, &result.primes[k], sizeof(int));
+                    int bytes_written = write(fd, &result.primes[k], sizeof(int)); // write the primes to the named pipe
                     if (bytes_written == -1)
                     {
                         perror("write");
@@ -253,11 +255,11 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                     }
                     // printf("Number of bytes written: %d", bytes_written);
                 }
-                end = clock();
+                end = clock(); // end the timer
                 double time_taken = (double)(end - start) / CLOCKS_PER_SEC;
                 /*printf("Time taken: %f\n", time_taken);*/
                 /* Write to time pipe */
-                int bytes_written = write(fd_t, &time_taken, sizeof(double));
+                int bytes_written = write(fd_t, &time_taken, sizeof(double)); // write the time taken to the time pipe
                 if (bytes_written == -1)
                 {
                     perror("write");
@@ -280,7 +282,8 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
             }
             // Secondly, write the signal to the signal pipe
             int bytes_written = write(fd_s, &signal, sizeof(int));
-            if (bytes_written == -1) {
+            if (bytes_written == -1)
+            {
                 perror("write");
                 close(fd_s);
                 return 1;
@@ -295,6 +298,7 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
         }
         else
         {
+
             // parent process
             int fd_r = open(fifonames[i + j * n], O_RDONLY | O_NONBLOCK);
             int fd_w = open(delegator_pipe, O_WRONLY | O_NONBLOCK);
@@ -302,7 +306,7 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
             fd_set fds;
             FD_ZERO(&fds);
             FD_SET(fd_r, &fds);
-            int num_ready = select(fd_r + 1, &fds, NULL, NULL, NULL);
+            int num_ready = select(fd_r + 1, &fds, NULL, NULL, NULL); // if there is data to be read
             if (num_ready == -1)
             {
                 perror("select");
@@ -310,7 +314,7 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
             }
             if (num_ready > 0)
             {
-                int bytes_read = read(fd_r, &prime, sizeof(int));
+                int bytes_read = read(fd_r, &prime, sizeof(int)); // read the prime from the named pipe
                 if (bytes_read == -1)
                 {
                     perror("read");
@@ -320,7 +324,6 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                 while (bytes_read > 0)
                 {
                     num_primes++;
-                    // printf("%d ", prime);
                     /* write to the delegator pipe*/
                     int bytes_written = write(fd_w, &prime, sizeof(int));
                     if (bytes_written == -1)
@@ -346,37 +349,28 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
                     }
                 }
             }
-            close(fd_r);
             wait(NULL);
         }
-        flag = !flag;
+        flag = !flag; // toggle the flag so that the next worker will use the other function
     }
-    printf("Number of primes in delegator %d: %d\n", j, num_primes);
+    // printf("Number of primes in delegator %d: %d\n", j, num_primes);
     return 0;
 }
 
-// void cleanup_handler(int sig, char **fifo_names, int num_pipes)
-// {
-//     // Close and remove all open named pipes
-//     for (int i = 0; i < num_pipes; i++)
-//     {
-//         if (access(fifo_names[i], F_OK))
-//         {
-//             if (close(fifo_names[i]) == -1)
-//             {
-//                 perror("Error closing pipe");
-//             }
-//             if (unlink(fifo_names[i]) == -1)
-//             {
-//                 perror("Error removing pipe");
-//             }
-//         }
-//     }
-//     // Exit the program
-//     exit(0);
-// }
+void cleanup_handler(int sig) // function used to delete pipes from the file system, if the user terminates the program with control + c
+{
+    int status = system("Rm fifo*; rm de*; rm time*; rm signal_pipe*");
+    if (status == -1)
+    {
+        perror("system");
+        exit(1);
+    }
+    exit(0);
+}
+
 int main(int argc, char *argv[])
 {
+    signal(SIGINT, cleanup_handler); // register the cleanup handler
 
     /* Check flags */
     int lower = 0;
@@ -386,14 +380,6 @@ int main(int argc, char *argv[])
     int n = 0;
     int num_primes = 0;
 
-    // --- Testing generate_random_intervals
-    // n = 5;
-    // int* random_intervals = generate_random_intervals(1, 25, n);
-    // for (int i = 0; i < 2 * n; i+= 2)
-    // {
-    //     printf("%d %d\n", random_intervals[i], random_intervals[i+1]);
-    // }
-    // ---
     int i = 0;
     for (i = 0; i < argc; i++)
     {
@@ -420,6 +406,12 @@ int main(int argc, char *argv[])
         if (strcmp(argv[i], "-n") == 0)
         {
             n = atoi(argv[i + 1]);
+            // if n is too big, then terminate the program
+            if (n > 10)
+            {
+                printf("n is too big. Please enter a value less than 10.\n");
+                exit(1);
+            }
             /*printf("n: %d\n", n);*/
         }
     }
@@ -433,7 +425,7 @@ int main(int argc, char *argv[])
         char *fifo_name = malloc(sizeof(char) * 10);
         sprintf(fifo_name, "fifo%d", k + 1);
         fifo_names[k] = fifo_name;
-        /*printf("fifo_name: %s\n", fifo_name);*/
+        // printf("fifo_name: %s\n", fifo_name);
         if (mkfifo(fifo_name, 0666) == -1)
         {
             printf("Error creating named pipe");
@@ -472,7 +464,6 @@ int main(int argc, char *argv[])
         exit(1);
     }
     int signal_pipe_fd = open("signal_pipe", O_RDONLY | O_NONBLOCK);
-
 
     /* Create n child processes */
     for (int j = 0; j < n; j++)
@@ -530,14 +521,14 @@ int main(int argc, char *argv[])
             }
             if (num_ready > 0)
             {
-                int bytes_read = read(fd_r, &prime, sizeof(int));
+                int bytes_read = read(fd_r, &prime, sizeof(int)); // read the first prime
                 if (bytes_read == -1)
                 {
                     perror("read");
                     close(fd_r);
                     return 1;
                 }
-                while (bytes_read > 0)
+                while (bytes_read > 0) // read all primes
                 {
                     if (prime <= upper)
                     {
@@ -548,7 +539,7 @@ int main(int argc, char *argv[])
                         num_ready = select(fd_r + 1, &fds, NULL, NULL, NULL);
                         if (num_ready > 0)
                         {
-                            bytes_read = read(fd_r, &prime, sizeof(int));
+                            bytes_read = read(fd_r, &prime, sizeof(int)); // read the next prime
                             if (bytes_read == -1)
                             {
                                 perror("read");
@@ -609,15 +600,15 @@ int main(int argc, char *argv[])
         }
         while (bytes_read > 0)
         {
-            if (time > max)
+            if (time > max) // update max
             {
                 max = time;
             }
-            if (time < min)
+            if (time < min) // update min
             {
                 min = time;
             }
-            sum += time;
+            sum += time; // update sum
             time_counter++;
             num_ready = select(time_pipe_fd + 1, &fds, NULL, NULL, NULL);
             if (num_ready > 0)
@@ -653,7 +644,8 @@ int main(int argc, char *argv[])
         perror("select");
         return 1;
     }
-    if (num_ready > 0) {
+    if (num_ready > 0)
+    {
         // printf("Signal pipe is ready\n");
         int signal;
         int bytes_read = read(signal_pipe_fd, &signal, sizeof(int));
@@ -666,14 +658,15 @@ int main(int argc, char *argv[])
 
         while (bytes_read > 0)
         {
-            if (signal == SIGUSR1)
+            if (signal == SIGUSR1) // update sigusr1_count
             {
-                sigusr1_count++;   
-            } else if (signal == SIGUSR2)
+                sigusr1_count++;
+            }
+            else if (signal == SIGUSR2) // update sigusr2_count
             {
                 sigusr2_count++;
             }
-            
+
             num_ready = select(signal_pipe_fd + 1, &fds2, NULL, NULL, NULL);
             if (num_ready > 0)
             {
