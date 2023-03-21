@@ -7,4 +7,4 @@
 1. make
 2. ./primes -l **LowerBound** -u **UpperBound** -[e|r] -n **NumOfNodes**
 
-Note: **LowerBound** and **UpperBound** refers to the range in which you wish to find primes, and **NumOfNodes** refers to the number of nodes each level of the tree has. Flags -e or -r can be used to specify if the program splits the intervals equally or randomly.
+Note: **LowerBound** and **UpperBound** refers to the range in which you wish to find primes, and **NumOfNodes** refers to the number of nodes each level of the tree has. Flags **-e** or **-r** can be used to specify if the program splits the intervals equally or randomly.
