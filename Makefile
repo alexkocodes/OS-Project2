@@ -2,7 +2,7 @@ OBJS 	= primes.o
 SOURCE	= primes.c
 OUT  	= primes
 CC	= gcc
-FLAGS   = -g -c -pedantic -ansi  -Wall -std=c99
+FLAGS   = -g -c -pedantic -ansi  -Wall -std=c99 -lm
 # -g option enables debugging mode 
 # -c flag generates object code for separate files
 
