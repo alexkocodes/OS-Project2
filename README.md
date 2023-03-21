@@ -9,4 +9,4 @@
 
 Note: **LowerBound** and **UpperBound** refers to the range in which you wish to find primes, and **NumOfNodes** refers to the number of nodes each level of the tree has. Flags **-e** or **-r** can be used to specify if the program splits the intervals equally or randomly.
 
-Program written by [Alex Ko](fyk211@nyu.edu) and [Ritin Malhotra](rm5486@nyu.edu). 
+Program written by [Alex Ko](mailto:fyk211@nyu.edu) and [Ritin Malhotra](mailto:rm5486@nyu.edu). 
