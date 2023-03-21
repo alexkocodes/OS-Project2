@@ -280,7 +280,8 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
             }
             // Secondly, write the signal to the signal pipe
             int bytes_written = write(fd_s, &signal, sizeof(int));
-            if (bytes_written == -1) {
+            if (bytes_written == -1)
+            {
                 perror("write");
                 close(fd_s);
                 return 1;
@@ -355,28 +356,20 @@ int delegator(int j, int n, int upper, int lower, char **fifonames, char **deleg
     return 0;
 }
 
-// void cleanup_handler(int sig, char **fifo_names, int num_pipes)
-// {
-//     // Close and remove all open named pipes
-//     for (int i = 0; i < num_pipes; i++)
-//     {
-//         if (access(fifo_names[i], F_OK))
-//         {
-//             if (close(fifo_names[i]) == -1)
-//             {
-//                 perror("Error closing pipe");
-//             }
-//             if (unlink(fifo_names[i]) == -1)
-//             {
-//                 perror("Error removing pipe");
-//             }
-//         }
-//     }
-//     // Exit the program
-//     exit(0);
-// }
+void cleanup_handler(int sig) // function used to delete pipes if the user terminates the program with control + c
+{
+    int status = system("Rm fifo*; rm de*; rm time*; rm signal_pipe*");
+    if (status == -1)
+    {
+        perror("system");
+        exit(1);
+    }
+    exit(0);
+}
+
 int main(int argc, char *argv[])
 {
+    signal(SIGINT, cleanup_handler); // register the cleanup handler
 
     /* Check flags */
     int lower = 0;
@@ -386,14 +379,6 @@ int main(int argc, char *argv[])
     int n = 0;
     int num_primes = 0;
 
-    // --- Testing generate_random_intervals
-    // n = 5;
-    // int* random_intervals = generate_random_intervals(1, 25, n);
-    // for (int i = 0; i < 2 * n; i+= 2)
-    // {
-    //     printf("%d %d\n", random_intervals[i], random_intervals[i+1]);
-    // }
-    // ---
     int i = 0;
     for (i = 0; i < argc; i++)
     {
@@ -472,7 +457,6 @@ int main(int argc, char *argv[])
         exit(1);
     }
     int signal_pipe_fd = open("signal_pipe", O_RDONLY | O_NONBLOCK);
-
 
     /* Create n child processes */
     for (int j = 0; j < n; j++)
@@ -653,7 +637,8 @@ int main(int argc, char *argv[])
         perror("select");
         return 1;
     }
-    if (num_ready > 0) {
+    if (num_ready > 0)
+    {
         // printf("Signal pipe is ready\n");
         int signal;
         int bytes_read = read(signal_pipe_fd, &signal, sizeof(int));
@@ -668,12 +653,13 @@ int main(int argc, char *argv[])
         {
             if (signal == SIGUSR1)
             {
-                sigusr1_count++;   
-            } else if (signal == SIGUSR2)
+                sigusr1_count++;
+            }
+            else if (signal == SIGUSR2)
             {
                 sigusr2_count++;
             }
-            
+
             num_ready = select(signal_pipe_fd + 1, &fds2, NULL, NULL, NULL);
             if (num_ready > 0)
             {
