@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <signal.h>
+#include <sys/select.h>
 
 // comparison function for qsort method
 int compare(const void *a, const void *b)
