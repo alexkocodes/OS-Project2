@@ -1,6 +1,5 @@
 OBJS 	= primes.o
 SOURCE	= primes.c
-HEADER  = 
 OUT  	= primes
 CC	= gcc
 FLAGS   = -g -c -pedantic -ansi  -Wall
